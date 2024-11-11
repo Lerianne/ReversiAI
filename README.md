@@ -1,1 +1,1 @@
-# ChessAI
+# ReversiAI
