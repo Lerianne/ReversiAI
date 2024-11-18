@@ -13,6 +13,50 @@ class StudentAgent(Agent):
   A class for your implementation. Feel free to use this class to
   add any helper functionalities needed for your agent.
   """
+  WEIGHTS_6x6 = [
+    100, -18,  12,  12, -18,  100,
+   -18, -24,  -6,  -6, -24, -18,
+    12,  -6,   6,   6,  -6,  12,
+    12,  -6,   6,   6,  -6,  12,
+   -18, -24,  -6,  -6, -24, -18,
+    100, -18,  12,  12, -18,  100
+]
+  WEIGHTS_8x8 = [
+     100, -24,  16,  16,  16,  16, -24,  100,
+    -24, -32,  -8,  -8,  -8,  -8, -32, -24,
+     16,  -8,   8,   0,   0,   8,  -8,  16,
+     16,  -8,   0,   8,   8,   0,  -8,  16,
+     16,  -8,   0,   8,   8,   0,  -8,  16,
+     16,  -8,   8,   0,   0,   8,  -8,  16,
+    -24, -32,  -8,  -8,  -8,  -8, -32, -24,
+     100, -24,  16,  16,  16,  16, -24,  100
+]
+  WEIGHTS_10x10 = [
+    100, -30,  20,  20,  20,  20,  20,  20, -30,  100,
+   -30, -40, -10, -10, -10, -10, -10, -10, -40, -30,
+    20, -10,  10,   0,   0,   0,   0,  10, -10,  20,
+    20, -10,   0,  10,  10,  10,  10,   0, -10,  20,
+    20, -10,   0,  10,  20,  20,  10,   0, -10,  20,
+    20, -10,   0,  10,  20,  20,  10,   0, -10,  20,
+    20, -10,   0,  10,  10,  10,  10,   0, -10,  20,
+    20, -10,  10,   0,   0,   0,   0,  10, -10,  20,
+   -30, -40, -10, -10, -10, -10, -10, -10, -40, -30,
+    100, -30,  20,  20,  20,  20,  20,  20, -30,  100
+]
+  WEIGHTS_12x12 = [
+    100, -36,  24,  24,  24,  24,  24,  24,  24,  24, -36,  100,
+   -36, -48, -12, -12, -12, -12, -12, -12, -12, -12, -48, -36,
+    24, -12,  12,   0,   0,   0,   0,   0,   0,  12, -12,  24,
+    24, -12,   0,  12,  12,  12,  12,  12,  12,   0, -12,  24,
+    24, -12,   0,  12,  24,  24,  24,  24,  12,   0, -12,  24,
+    24, -12,   0,  12,  24,  36,  36,  24,  12,   0, -12,  24,
+    24, -12,   0,  12,  24,  36,  36,  24,  12,   0, -12,  24,
+    24, -12,   0,  12,  24,  24,  24,  24,  12,   0, -12,  24,
+    24, -12,  12,   0,   0,   0,   0,   0,   0,  12, -12,  24,
+   -36, -48, -12, -12, -12, -12, -12, -12, -12, -12, -48, -36,
+    100, -36,  24,  24,  24,  24,  24,  24,  24,  24, -36,  100
+]
+
 
   def __init__(self):
     super(StudentAgent, self).__init__()
@@ -41,7 +85,9 @@ class StudentAgent(Agent):
     start_time = time.time()
         
     # Define the depth of the search
-    max_depth = 4
+    max_depth = 5
+    initial_weight = 0
+    
 
     # Run Alpha-Beta Pruning to find the best move
     best_move, _ = self.alpha_beta_search(chess_board, player, opponent, max_depth)
@@ -66,7 +112,7 @@ class StudentAgent(Agent):
       valid_moves = get_valid_moves(chess_board, player)
 
       if not valid_moves:
-          return None, self.evaluate_board(chess_board, player, opponent)
+          return None, self.evaluate_board(chess_board, player, opponent, weight)
 
       best_value = float("-inf")
 
@@ -136,7 +182,41 @@ class StudentAgent(Agent):
     """
     Basic evaluation function: difference in number of pieces.
     """
-    player_score = np.sum(chess_board == player)
-    opponent_score = np.sum(chess_board == opponent)
-    return player_score - opponent_score
+    # Get the board size
+    board_size = chess_board.shape[0]
+
+    # Select the correct weight variable based on the board size
+    if board_size == 6:
+        weights = self.WEIGHTS_6x6
+    elif board_size == 8:
+        weights = self.WEIGHTS_8x8
+    elif board_size == 10:
+        weights = self.WEIGHTS_10x10
+    elif board_size == 12:
+        weights = self.WEIGHTS_12x12
+    else:
+        raise ValueError("Unsupported board size")
+
+    # Calculate the score based on the weights
+    player_score = sum(
+        weights[i * board_size + j]
+        for i in range(board_size)
+        for j in range(board_size)
+        if chess_board[i, j] == player
+    )
+    opponent_score = sum(
+        weights[i * board_size + j]
+        for i in range(board_size)
+        for j in range(board_size)
+        if chess_board[i, j] == opponent
+    )
+    opponen_moves = len(get_valid_moves(chess_board, opponent))
+    mobility_score = -opponen_moves
+
+    # Return the difference as the evaluation score
+    return player_score - opponent_score + mobility_score
+
+    # player_score = np.sum(chess_board == player)
+    # opponent_score = np.sum(chess_board == opponent)
+    # return player_score - opponent_score + 
 
