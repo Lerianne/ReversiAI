@@ -108,7 +108,7 @@ class StudentAgent(Agent):
     best_move, _ = self.alpha_beta_search(chess_board, player, opponent, max_depth, start_time, 1.98)
       
     time_taken = time.time() - start_time
-
+    print("board size: " , board_size)
     print("My AI's turn took ", time_taken, "seconds.")
 
     return best_move
@@ -121,6 +121,9 @@ class StudentAgent(Agent):
       alpha = float("-inf")
       beta = float("inf")
 
+      player_score= self.evaluate_weights(chess_board, player)
+      opponent_score = self.evaluate_weights(chess_board, opponent)
+
       # Get all valid moves for the current player
       valid_moves = get_valid_moves(chess_board, player)
 
@@ -132,7 +135,7 @@ class StudentAgent(Agent):
         max_depth = 5
 
       if not valid_moves:
-          return None, self.evaluate_board(chess_board, player, opponent)
+          return None, self.evaluate_board(chess_board, player, opponent, player_score, opponent_score)
 
       best_value = float("-inf")
 
@@ -141,13 +144,13 @@ class StudentAgent(Agent):
           if time.time() - start_time >= time_limit:
               print("Time limit reached in alpha_beta_search.")
               break
-
+          
           # Simulate the move
           board_copy = deepcopy(chess_board)
           execute_move(board_copy, move, player)
 
           # Call the minimizer
-          value = self.min_value(board_copy, player, opponent, alpha, beta, max_depth - 1, start_time, time_limit)
+          value = self.min_value(board_copy, player, opponent, alpha, beta, max_depth - 1, start_time, time_limit, player_score, opponent_score)
 
           if value > best_value:
               best_value = value
@@ -158,13 +161,14 @@ class StudentAgent(Agent):
 
       return best_move, best_value
 
-  def max_value(self, chess_board, player, opponent, alpha, beta, depth, start_time, time_limit):
+  def max_value(self, chess_board, player, opponent, alpha, beta, depth, start_time, time_limit, player_score, opponent_score):
       """
       Maximizer for Alpha-Beta Pruning.
       """
       is_endgame, player_score, opponent_score = check_endgame(chess_board, player, opponent)
+      
       if depth == 0 or is_endgame:
-          return self.evaluate_board(chess_board, player, opponent)
+          return self.evaluate_board(chess_board, player, opponent, player_score, opponent_score)
 
       value = float("-inf")
 
@@ -177,7 +181,7 @@ class StudentAgent(Agent):
           board_copy = deepcopy(chess_board)
           execute_move(board_copy, move, player)
 
-          value = max(value, self.min_value(board_copy, player, opponent, alpha, beta, depth - 1, start_time, time_limit))
+          value = max(value, self.min_value(board_copy, player, opponent, alpha, beta, depth - 1, start_time, time_limit, player_score, opponent_score))
 
           if value >= beta:
               return value
@@ -185,13 +189,13 @@ class StudentAgent(Agent):
 
       return value
 
-  def min_value(self, chess_board, player, opponent, alpha, beta, depth, start_time, time_limit):
+  def min_value(self, chess_board, player, opponent, alpha, beta, depth, start_time, time_limit, player_score, opponent_score):
       """
       Minimizer for Alpha-Beta Pruning.
       """
       is_endgame, player_score, opponent_score = check_endgame(chess_board, player, opponent)
       if depth == 0 or is_endgame:
-          return self.evaluate_board(chess_board, player, opponent)
+          return self.evaluate_board(chess_board, player, opponent, player_score, opponent_score)
 
       value = float("inf")
 
@@ -204,7 +208,7 @@ class StudentAgent(Agent):
           board_copy = deepcopy(chess_board)
           execute_move(board_copy, move, opponent)
 
-          value = min(value, self.max_value(board_copy, player, opponent, alpha, beta, depth - 1, start_time, time_limit))
+          value = min(value, self.max_value(board_copy, player, opponent, alpha, beta, depth - 1, start_time, time_limit, player_score, opponent_score))
 
           if value <= alpha:
               return value
@@ -212,7 +216,7 @@ class StudentAgent(Agent):
 
       return value
 
-  def evaluate_board(self, chess_board, player, opponent):
+  def evaluate_board(self, chess_board, player, opponent, player_score, opponent_score):
         """
         Evaluate the board state based on multiple factors.
 
@@ -230,37 +234,10 @@ class StudentAgent(Agent):
         #corner_score = sum(1 for corner in corners if board[corner] == color) * 10
         #corner_penalty = sum(1 for corner in corners if board[corner] == 3 - color) * -10
 
-        board_size = chess_board.shape[0]
+        player_score = self.evaluate_weights(chess_board, player) - player_score 
+        opponent_score = self.evaluate_weights(chess_board, opponent) - opponent_score
 
-        # Select the correct weight variable based on the board size
-        if board_size == 6:
-          weights = self.WEIGHTS_6x6
-        elif board_size == 8:
-          weights = self.WEIGHTS_8x8
-        elif board_size == 10:
-          weights = self.WEIGHTS_10x10
-        elif board_size == 12:
-          weights = self.WEIGHTS_12x12
-        else:
-            raise ValueError("Unsupported board size")
-
-        player_score = 0
-        opponent_score = 0
-      # Calculate the score based on the weights
-        player_score = sum(
-          weights[i * board_size + j]
-          for i in range(board_size-1)
-          for j in range(board_size-1)
-          if chess_board[i, j] == player
-      )
-        opponent_score = sum(
-          weights[i * board_size + j]
-          for i in range(board_size-1)
-          for j in range(board_size-1)
-          if chess_board[i, j] == opponent
-      )
-
-          # Mobility: the number of moves the opponent can make
+        # Mobility: the number of moves the opponent can make
         opponent_moves = len(get_valid_moves(chess_board, opponent))
         mobility_score = -opponent_moves
 
@@ -268,6 +245,35 @@ class StudentAgent(Agent):
         total_score = player_score - opponent_score + mobility_score
         return total_score
   
+  def evaluate_weights(self, chess_board, player):
+
+    player_score = 0
+
+    board_size = chess_board.shape[0]
+
+      # Select the correct weight variable based on the board size
+    if board_size == 6:
+        weights = self.WEIGHTS_6x6
+    elif board_size == 8:
+        weights = self.WEIGHTS_8x8
+    elif board_size == 10:
+          weights = self.WEIGHTS_10x10
+    elif board_size == 12:
+        weights = self.WEIGHTS_12x12
+    else:
+        raise ValueError("Unsupported board size")
+
+      # Calculate the score based on the weights
+    player_score = sum(
+          weights[i * board_size + j]
+          for i in range(board_size-1)
+          for j in range(board_size-1)
+          if chess_board[i, j] == player
+      )
+
+    return player_score
+
+
 
 
 
