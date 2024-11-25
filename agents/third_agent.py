@@ -44,10 +44,11 @@ class ThirdAgent(Agent):
 
     while True:
         if time.time() - start_time > time_limit:
-               #print(best_move)
+               print(best_move)
                break
         
         if depth > max_depth:
+            print(best_move)
             break
 
         _, move = self.minimax(chess_board, player, opponent, depth, True, float("-inf"), float("inf"), start_time, time_limit)
