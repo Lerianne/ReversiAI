@@ -38,13 +38,26 @@ class ThirdAgent(Agent):
     start_time = time.time()
     time_limit = 1.95
 
-    depth = 4
+    depth = 1
     best_move = None
+    max_depth = 12
 
-    _, best_move = self.minimax(chess_board, player, opponent, depth, True, float("-inf"), float("inf"), start_time, time_limit)
+    while True:
+        if time.time() - start_time > time_limit:
+               #print(best_move)
+               break
+        
+        if depth > max_depth:
+            break
+
+        _, move = self.minimax(chess_board, player, opponent, depth, True, float("-inf"), float("inf"), start_time, time_limit)
+
+        if move is not None:
+            best_move = move
+
+        depth += 1
 
     time_taken = time.time() - start_time
-
     print("My AI's turn took ", time_taken, "seconds.")
     return best_move
   
