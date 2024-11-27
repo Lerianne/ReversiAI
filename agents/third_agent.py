@@ -6,6 +6,7 @@ import numpy as np
 from copy import deepcopy
 import time
 from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
+import psutil
 
 @register_agent("third_agent")
 class ThirdAgent(Agent):
@@ -43,27 +44,19 @@ class ThirdAgent(Agent):
 
     Please check the sample implementation in agents/random_agent.py or agents/human_agent.py for more details.
     """
-
     start_time = time.time()
     time_limit = 1.95
-    depth = self.dynamic_depth(chess_board, 0)
+    depth = 4
     best_move = None
 
-    while True:
-        if time.time() - start_time > time_limit:
-            break
-
-
-        depth = self.dynamic_depth(chess_board, time.time())
-        _, move = self.minimax(chess_board, player, opponent, depth, True, float("-inf"), float("inf"), start_time, time_limit)
-
-        if move is not None:
-            best_move = move
-
-        depth += 1
-
+    _, best_move = self.minimax(chess_board, player, opponent, depth, True, float("-inf"), float("inf"), start_time, time_limit)
+    
     time_taken = time.time() - start_time
+
+
     print("My AI's turn took ", time_taken, "seconds.")
+    print('RAM memory used:', psutil.virtual_memory()[2])
+    print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
     return best_move
   
   def minimax(self, board, player, opponent, max_depth, isMaxPlayer, alpha, beta, start_time, time_limit):
@@ -71,7 +64,6 @@ class ThirdAgent(Agent):
     is_endgame, _, _ = check_endgame(board, player, opponent)
     if max_depth == 0 or is_endgame:
         return self.evaluate_board(board, player, opponent), None
-    
     
     if isMaxPlayer:
         best_value = float("-inf")
@@ -214,7 +206,7 @@ class ThirdAgent(Agent):
             capture_count = count_capture(board, move, player)
         
         else:
-           capture_count = 0
+            capture_count = 0
 
         # You can use any part of your evaluation function here, for example:
         return self.evaluate_board(new_board, player, opponent) + capture_count  
