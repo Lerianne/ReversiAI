@@ -18,6 +18,15 @@ class ThirdAgent(Agent):
     super(ThirdAgent, self).__init__()
     self.name = "SecondAgent"
 
+  def dynamic_depth(self, board, time_taken):
+        """
+        Adjust the search depth dynamically based on board size and time taken.
+        """
+        board_size = board.shape[0] * board.shape[1]
+        if time_taken > 1.5:  # Reduce depth if time is running out
+            return min(4, board_size // 16)
+        return min(8, board_size // 10)
+
   def step(self, chess_board, player, opponent):
     """
     Implement the step function of your agent here.
@@ -37,19 +46,15 @@ class ThirdAgent(Agent):
 
     start_time = time.time()
     time_limit = 1.95
-
-    depth = 1
+    depth = self.dynamic_depth(chess_board, 0)
     best_move = None
-    max_depth = 12
 
     while True:
         if time.time() - start_time > time_limit:
-               #print(best_move)
-               break
-        
-        if depth > max_depth:
             break
 
+
+        depth = self.dynamic_depth(chess_board, time.time())
         _, move = self.minimax(chess_board, player, opponent, depth, True, float("-inf"), float("inf"), start_time, time_limit)
 
         if move is not None:

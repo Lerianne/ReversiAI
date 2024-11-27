@@ -13,6 +13,7 @@ class SecondAgent(Agent):
   A class for your implementation. Feel free to use this class to
   add any helper functionalities needed for your agent.
   """
+  MOVE_COUNT =0
 
   def __init__(self):
     super(SecondAgent, self).__init__()
@@ -65,13 +66,14 @@ class SecondAgent(Agent):
     time_taken = time.time() - start_time
 
     print("My AI's turn took ", time_taken, "seconds.")
+    self.MOVE_COUNT +=1
 
     # Dummy return (you should replace this with your actual logic)
     # Returning a random valid move as an example
     return best_move
   
   def minimax(self, board, player, opponent, max_depth, isMaxPlayer, alpha, beta, start_time, time_limit):
-
+    
     elapsed_time = time.time() - start_time
 
     if elapsed_time >= time_limit:
@@ -80,35 +82,41 @@ class SecondAgent(Agent):
     is_endgame, _, _ = check_endgame(board, player, opponent)
     if max_depth == 0 or is_endgame:
         return self.evaluate_board(board, player, opponent), None
-    
+        
     valid_moves = get_valid_moves(board, player)
-    
-    sorted_moves = sorted(valid_moves, key=lambda move: self.evaluate_move(board, move, player if isMaxPlayer else opponent, opponent if isMaxPlayer else player), reverse=isMaxPlayer)
+        
+    #sorted_moves = sorted(valid_moves, key=lambda move: self.evaluate_move(board, move, player if isMaxPlayer else opponent, opponent if isMaxPlayer else player), reverse=isMaxPlayer)
+    sorted_moves = sorted(valid_moves, key=lambda move: (
+    5 * self.is_corner(move, board) - 
+    3 * self.is_trap(move, board, opponent) +
+    self.evaluate_board(deepcopy(board), player, opponent)
+), reverse=isMaxPlayer)
+
 
     if isMaxPlayer:
         best_value = float("-inf")
-        best_move = None
-        
+        best_move_so_far = None
+            
         for move in sorted_moves:
             new_game = deepcopy(board)
             execute_move(new_game, move, player)
 
             value, _ = self.minimax(new_game, player, opponent, max_depth - 1, False, alpha, beta, start_time, time_limit)
-             
+                
             if value > best_value:
                 best_value = value
-                best_move = move
+                best_move_so_far = move
 
             alpha = max(alpha, value)
-           
+            
             if beta <= alpha:
                 break
-           
-        return best_value, best_move
-        
+            
+        return best_value, best_move_so_far
+            
     else:
         min_value = float("inf")
-        best_move = None
+        best_move_so_far = None
 
         for move in sorted_moves:
             new_game = deepcopy(board)
@@ -118,20 +126,21 @@ class SecondAgent(Agent):
 
             if value < min_value:
                 min_value = value
-                best_move = move
+                best_move_so_far = move
 
             beta = min(beta, value)
             if beta <= alpha:
-               break
-        
-        return min_value, best_move
+                break
+            
+        return min_value, best_move_so_far
+
   
   def evaluate_board(self, board, player, opponent):
     # Coin parity (difference in disk count)
     player_count = np.sum(board == player)  # Count pieces for the player
     opponent_count = np.sum(board == opponent)  # Count pieces for the opponent
     
-    pairty = player_count - opponent_count
+    parity = player_count - opponent_count
 
     # Mobility (number of valid moves)
     player_moves = len(get_valid_moves(board, player))
@@ -151,7 +160,7 @@ class SecondAgent(Agent):
     edge_score = sum(board[i][j] == player for i in [0, board.shape[0] - 1] for j in range(1, board.shape[1] - 1)) + \
                       sum(board[i][j] == player for i in range(1, board.shape[0] - 1) for j in [0, board.shape[1] - 1])
 
-    return pairty + 2 * mobility_score + 5 * corners_score + 3*stability_score + 2.5*edge_score
+    return parity + 2 * mobility_score + 5 * corners_score + 3*stability_score + 2.5*edge_score
     #return pairty
   
   def get_stability(self, board, player):
@@ -177,10 +186,17 @@ class SecondAgent(Agent):
      def is_stable_disk(row, col):
         # Check if the disk is stable by analyzing its neighbors
         # A piece is stable if it's in the corners, edges, or if it's surrounded by its own pieces
-        return (
-            all(board[r][c] == player for r, c in neighbors(row, col))  # All neighboring squares are player's pieces
-            or (row, col) in edges + corners  # The piece is in a corner or edge
-        )
+        if (row, col) in corners:
+            return True
+        elif (row, col) in edges:
+            neighbors_on_edge = [
+                (row + dr, col) for dr in [-1, 1] if 0 <= row + dr < board.shape[0]
+            ] + [
+                (row, col + dc) for dc in [-1, 1] if 0 <= col + dc < board.shape[1]
+            ]
+            return all(board[r][c] == player for r, c in neighbors_on_edge)
+        else:
+            return all(board[r][c] == player for r, c in neighbors(row, col))
      
       # Loop through the regions and count stable pieces
      for region in [corners, edges, inner_region]:
@@ -200,3 +216,39 @@ class SecondAgent(Agent):
 
     # You can use any part of your evaluation function here, for example:
     return self.evaluate_board(new_board, player, opponent)      
+
+  def early_game(self, chess_board):
+        if self.MOVE_COUNT <= 2 & chess_board.shape[0] == 6:
+            return True
+        elif self.MOVE_COUNT <= 3 & chess_board.shape[0] == 8:
+            return True
+        elif self.MOVE_COUNT <= 4 & chess_board.shape[0] == 10:
+            return True
+        elif self.MOVE_COUNT <= 5 & chess_board.shape[0] == 12:
+            return True
+        else: 
+          return False
+        
+    
+  def is_corner(self, move, board):
+        corners = [(0, 0), (0, board.shape[1] - 1), (board.shape[0] - 1, 0), (board.shape[0] - 1, board.shape[1] - 1)]
+        return 1 if move in corners else 0
+  
+  def is_trap(self, move, board, opponent):
+    """
+    Evaluates if a move places the opponent in a disadvantageous position (a 'trap').
+    """
+    corners = [(0, 0), (0, len(board) - 1), (len(board) - 1, 0), (len(board) - 1, len(board) - 1)]
+    move_x, move_y = move  # Assuming move is a tuple of (row, col)
+    
+    for corner in corners:
+        corner_x, corner_y = corner
+        # Check if corner is within the board and if it's occupied by the opponent
+        if (
+            0 <= corner_x < len(board) and
+            0 <= corner_y < len(board[0]) and
+            board[corner_x][corner_y] == opponent
+        ):
+            return True  # It's a trap
+        
+    return False
