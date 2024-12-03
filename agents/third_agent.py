@@ -6,7 +6,6 @@ import numpy as np
 from copy import deepcopy
 import time
 from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
-import psutil
 
 @register_agent("third_agent")
 class ThirdAgent(Agent):
@@ -18,15 +17,6 @@ class ThirdAgent(Agent):
   def __init__(self):
     super(ThirdAgent, self).__init__()
     self.name = "SecondAgent"
-
-  def dynamic_depth(self, board, time_taken):
-        """
-        Adjust the search depth dynamically based on board size and time taken.
-        """
-        board_size = board.shape[0] * board.shape[1]
-        if time_taken > 1.5:  # Reduce depth if time is running out
-            return min(4, board_size // 16)
-        return min(8, board_size // 10)
 
   def step(self, chess_board, player, opponent):
     """
@@ -53,10 +43,7 @@ class ThirdAgent(Agent):
     
     time_taken = time.time() - start_time
 
-
     print("My AI's turn took ", time_taken, "seconds.")
-    print('RAM memory used:', psutil.virtual_memory()[2])
-    print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
     return best_move
   
   def minimax(self, board, player, opponent, max_depth, isMaxPlayer, alpha, beta, start_time, time_limit):
@@ -82,7 +69,9 @@ class ThirdAgent(Agent):
                break
 
             new_game = deepcopy(board)
-            execute_move(new_game, move, player)
+
+            if move is not None:
+                execute_move(new_game, move, player)
 
             value, _ = self.minimax(new_game, player, opponent, max_depth - 1, False, alpha, beta, start_time, time_limit)
              
@@ -109,7 +98,9 @@ class ThirdAgent(Agent):
 
         for move in sorted_moves:
             new_game = deepcopy(board)
-            execute_move(new_game, move, opponent)
+
+            if move is not None:
+                execute_move(new_game, move, opponent)
 
             if time.time() - start_time > time_limit:
                #print(best_move)
@@ -200,7 +191,9 @@ class ThirdAgent(Agent):
         """
         # Create a copy of the board and apply the move
         new_board = deepcopy(board)
-        execute_move(new_board, move, player)    
+
+        if move is not None:
+            execute_move(new_board, move, player)    
 
         if move is not None:
             capture_count = count_capture(board, move, player)
