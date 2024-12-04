@@ -27,8 +27,8 @@ class StudentAgent(Agent):
     # Setting a time limit of 1.95 seconds to give function time to return when limit is reached to not go over 2 sec
     time_limit = 1.95
 
-    # Static search depth of 4
-    depth = 4
+    # Static search depth of 3
+    depth = 3
 
     # Initalize best move
     best_move = None
@@ -149,38 +149,6 @@ class StudentAgent(Agent):
   # Function used to evaluate the board at a given state
   def evaluate_board(self, board, player, opponent):
 
-    # Used to determine if we are in "early game" or "late game" which affect the weights of each heuristic
-    move_count = np.sum(board != 0)
-
-    # Calculate the board size
-    board_size = board.shape[0] * board.shape[1]
-    
-    if move_count <= board_size // 3:
-        # Early game
-        # Set weights
-        # More emphasis on gaining control of corners, not so much on having a lot of tiles or being on the edge
-        mobility_weight = 3
-        corner_weight = 10
-        edge_weight = 2
-        parity_weight = 1
-      
-    elif move_count <= 2 * board_size // 3:
-        # Mid-game
-        # Set weights
-        # Now, gaining conrol of corners is more imporant, as well as having pieces on the edge 
-        mobility_weight = 2
-        corner_weight = 12
-        edge_weight = 5
-        parity_weight = 2
-    else:
-        # Late game
-        # Still want to gain control of corners if havent yet, and remain on the edge of the board
-        # Having more tiles on the board also becomes more important
-        mobility_weight = 1
-        corner_weight = 15
-        edge_weight = 10
-        parity_weight = 3
-
     # Coin parity (difference in disk count)
     # Adapted from ChatGPT
     player_count = np.sum(board == player)  
@@ -196,8 +164,8 @@ class StudentAgent(Agent):
     # Reward being in corners, punish opponent being in corners
     # Adapted from gpt_greedy_corners_agent
     corners = [(0, 0), (0, board.shape[1] - 1), (board.shape[0] - 1, 0), (board.shape[0] - 1, board.shape[1] - 1)]
-    corner_score = corner_score = sum(1 for corner in corners if board[corner] == player) * (corner_weight // 2)
-    corner_penalty = corner_score = sum(1 for corner in corners if board[corner] == opponent) * -(corner_weight // 2)
+    corner_score = sum(1 for corner in corners if board[corner] == player) * 10
+    corner_penalty = sum(1 for corner in corners if board[corner] == opponent) * -10
     corners_score = corner_score + corner_penalty
 
     # Calculate stablility of pieces, adapted from
@@ -210,7 +178,7 @@ class StudentAgent(Agent):
                       sum(board[i][j] == player for i in range(1, board.shape[0] - 1) for j in [0, board.shape[1] - 1])
 
     # Return sum of each heuristic as overall evaluation 
-    return parity_weight * parity + mobility_weight * mobility_score + corner_weight * corners_score + 3 * stability_score + edge_weight * edge_score
+    return parity + 2 * mobility_score + 5 * corners_score + 3 * stability_score + 2.5 * edge_score
     
   # Calculating stability of pieces 
   # Adapted from https://github.com/Roodaki/Minimax-Powered-Othello-Game/blob/master/src/ai_agent.py
